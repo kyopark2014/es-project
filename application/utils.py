@@ -32,6 +32,7 @@ def load_config():
         logger.error(f"Error loading config: {e}")
         config = {}
 
+        sts = boto3.client("sts")
         response = sts.get_caller_identity()
         accountId = response["Account"]
         config['accountId'] = accountId
