@@ -462,7 +462,8 @@ def create_ec2_role(knowledge_base_role_arn: str) -> str:
                             "arn:aws:bedrock:*:*:inference-profile/*",
                             "arn:aws:bedrock:us-west-2:*:foundation-model/*",
                             "arn:aws:bedrock:us-east-1:*:foundation-model/*",
-                            "arn:aws:bedrock:us-east-2:*:foundation-model/*"
+                            "arn:aws:bedrock:us-east-2:*:foundation-model/*",
+                            "arn:aws:bedrock:ap-northeast-2:*:foundation-model/*"
                         ]
                     }
                 ]
@@ -3738,7 +3739,7 @@ def main():
         ec2_role_arn = create_ec2_role(knowledge_base_role_arn)
         
         # 3. Create secrets
-        # secret_arns = create_secrets()
+        secret_arns = create_secrets()
         
         # 4. Create OpenSearch collection (with EC2 and Knowledge Base roles for data access)
         opensearch_info = create_opensearch_collection(ec2_role_arn, knowledge_base_role_arn)

@@ -1,245 +1,110 @@
 nova_premier = [
     {
-        "bedrock_region": "us-west-2", # Oregon
+        "bedrock_region": "ap-northeast-2",
         "model_type": "nova",
-        "model_id": "us.amazon.nova-premier-v1:0"    
-    },
-    {
-        "bedrock_region": "us-east-1", # N.Virginia
-        "model_type": "nova",
-        "model_id": "us.amazon.nova-premier-v1:0"
-    },
-    {
-        "bedrock_region": "us-east-2", # Ohio
-        "model_type": "nova",
-        "model_id": "us.amazon.nova-premier-v1:0"
+        "model_id": "global.amazon.nova-premier-v1:0"    
     }
 ]
 
 nova_pro_models = [   # Nova Pro
     {   
-        "bedrock_region": "us-west-2", # Oregon
+        "bedrock_region": "ap-northeast-2",
         "model_type": "nova",
-        "model_id": "us.amazon.nova-pro-v1:0"
-    },
-    {
-        "bedrock_region": "us-east-1", # N.Virginia
-        "model_type": "nova",
-        "model_id": "us.amazon.nova-pro-v1:0"
-    },
-    {
-        "bedrock_region": "us-east-2", # Ohio
-        "model_type": "nova",
-        "model_id": "us.amazon.nova-pro-v1:0"
+        "model_id": "global.amazon.nova-pro-v1:0"
     }
 ]
 
 nova_lite_models = [   # Nova Pro
     {   
-        "bedrock_region": "us-west-2", # Oregon
+        "bedrock_region": "ap-northeast-2",
         "model_type": "nova",
-        "model_id": "us.amazon.nova-lite-v1:0"
-    },
-    {
-        "bedrock_region": "us-east-1", # N.Virginia
-        "model_type": "nova",
-        "model_id": "us.amazon.nova-lite-v1:0"
-    },
-    {
-        "bedrock_region": "us-east-2", # Ohio
-        "model_type": "nova",
-        "model_id": "us.amazon.nova-lite-v1:0"
+        "model_id": "global.amazon.nova-lite-v1:0"
     }
 ]
 
 nova_micro_models = [   # Nova Micro
     {   
-        "bedrock_region": "us-west-2", # Oregon
+        "bedrock_region": "ap-northeast-2",
         "model_type": "nova",
-        "model_id": "us.amazon.nova-micro-v1:0"
-    },
-    {
-        "bedrock_region": "us-east-1", # N.Virginia
-        "model_type": "nova",
-        "model_id": "us.amazon.nova-micro-v1:0"
-    },
-    {
-        "bedrock_region": "us-east-2", # Ohio
-        "model_type": "nova",
-        "model_id": "us.amazon.nova-micro-v1:0"
+        "model_id": "global.amazon.nova-micro-v1:0"
     }
 ]
 
 nova_2_lite_models = [   # Nova 2 Lite
     {   
-        "bedrock_region": "us-west-2", # Oregon
+        "bedrock_region": "ap-northeast-2",
         "model_type": "nova",
-        "model_id": "us.amazon.nova-2-lite-v1:0"
-    },
-    {
-        "bedrock_region": "us-east-1", # N.Virginia
-        "model_type": "nova",
-        "model_id": "us.amazon.nova-2-lite-v1:0"
-    },
-    {
-        "bedrock_region": "us-east-2", # Ohio
-        "model_type": "nova",
-        "model_id": "us.amazon.nova-2-lite-v1:0"
+        "model_id": "global.amazon.nova-2-lite-v1:0"
     }
 ]
 
 claude_4_5_haiku_models = [   # Haiku 4.5
     {
-        "bedrock_region": "us-west-2", # Oregon
+        "bedrock_region": "ap-northeast-2",
         "model_type": "claude",
-        "model_id": "us.anthropic.claude-haiku-4-5-20251001-v1:0"
-    },
-    {
-        "bedrock_region": "us-east-1", # N.Virginia
-        "model_type": "claude",
-        "model_id": "us.anthropic.claude-haiku-4-5-20251001-v1:0"
-    },
-    {
-        "bedrock_region": "us-east-2", # Ohio
-        "model_type": "claude",
-        "model_id": "us.anthropic.claude-haiku-4-5-20251001-v1:0"
+        "model_id": "global.anthropic.claude-haiku-4-5-20251001-v1:0"
     }
 ]
 
 claude_4_5_opus_models = [   # Opus 4.5
     {
-        "bedrock_region": "us-west-2", # Oregon
+        "bedrock_region": "ap-northeast-2",
         "model_type": "claude",
-        "model_id": "us.anthropic.claude-opus-4-5-20251101-v1:0"
-    },
-    {
-        "bedrock_region": "us-east-1", # N.Virginia
-        "model_type": "claude",
-        "model_id": "us.anthropic.claude-opus-4-5-20251101-v1:0"
-    },
-    {
-        "bedrock_region": "us-east-2", # Ohio
-        "model_type": "claude",
-        "model_id": "us.anthropic.claude-opus-4-5-20251101-v1:0"
+        "model_id": "global.anthropic.claude-opus-4-5-20251101-v1:0"
     }
 ]
 
 claude_4_5_sonnet_models = [   # Sonnet 4.5
     {
-        "bedrock_region": "us-west-2", # Oregon
+        "bedrock_region": "ap-northeast-2",
         "model_type": "claude",
-        "model_id": "us.anthropic.claude-sonnet-4-5-20250929-v1:0"
-    },
-    {
-        "bedrock_region": "us-east-1", # N.Virginia
-        "model_type": "claude",
-        "model_id": "us.anthropic.claude-sonnet-4-5-20250929-v1:0"
-    },
-    {
-        "bedrock_region": "us-east-2", # Ohio
-        "model_type": "claude",
-        "model_id": "us.anthropic.claude-sonnet-4-5-20250929-v1:0"
+        "model_id": "global.anthropic.claude-sonnet-4-5-20250929-v1:0"
     }
 ]
 
 claude_4_opus_models = [   # Opus 4
     {
-        "bedrock_region": "us-west-2", # Oregon
+        "bedrock_region": "ap-northeast-2",
         "model_type": "claude",
-        "model_id": "us.anthropic.claude-opus-4-20250514-v1:0"
-    },
-    {
-        "bedrock_region": "us-east-1", # N.Virginia
-        "model_type": "claude",
-        "model_id": "us.anthropic.claude-4-opus-20250514-v1:0"
-    },
-    {
-        "bedrock_region": "us-east-2", # Ohio
-        "model_type": "claude",
-        "model_id": "us.anthropic.claude-4-opus-20250514-v1:0"
+        "model_id": "global.anthropic.claude-opus-4-20250514-v1:0"
     }
 ]
 
 claude_4_sonnet_models = [   # Sonnet 4
     {
-        "bedrock_region": "us-west-2", # Oregon
+        "bedrock_region": "ap-northeast-2",
         "model_type": "claude",
-        "model_id": "us.anthropic.claude-sonnet-4-20250514-v1:0"
-    },
-    {
-        "bedrock_region": "us-east-1", # N.Virginia
-        "model_type": "claude",
-        "model_id": "us.anthropic.claude-sonnet-4-20250514-v1:0"
-    },
-    {
-        "bedrock_region": "us-east-2", # Ohio
-        "model_type": "claude",
-        "model_id": "us.anthropic.claude-4-sonnet-20250219-v1:0"
+        "model_id": "global.anthropic.claude-sonnet-4-20250514-v1:0"
     }
 ]
 
 claude_3_7_sonnet_models = [   # Sonnet 3.7
     {
-        "bedrock_region": "us-west-2", # Oregon
+        "bedrock_region": "ap-northeast-2",
         "model_type": "claude",
-        "model_id": "us.anthropic.claude-3-7-sonnet-20250219-v1:0"
-    },
-    {
-        "bedrock_region": "us-east-1", # N.Virginia
-        "model_type": "claude",
-        "model_id": "us.anthropic.claude-3-7-sonnet-20250219-v1:0"
-    },
-    {
-        "bedrock_region": "us-east-2", # Ohio
-        "model_type": "claude",
-        "model_id": "us.anthropic.claude-3-7-sonnet-20250219-v1:0"
+        "model_id": "global.anthropic.claude-3-7-sonnet-20250219-v1:0"
     }
 ]
 
 claude_3_5_sonnet_v1_models = [   # Sonnet 3.5 V1
     {
-        "bedrock_region": "us-west-2", # Oregon
+        "bedrock_region": "ap-northeast-2",
         "model_type": "claude",
         "model_id": "anthropic.claude-3-5-sonnet-20240620-v1:0"
-    },
-    {
-        "bedrock_region": "us-east-1", # N.Virginia
-        "model_type": "claude",
-        "model_id": "anthropic.claude-3-5-sonnet-20240620-v1:0"
-    },
-    {
-        "bedrock_region": "us-east-2", # Ohio
-        "model_type": "claude",
-        "model_id": "us.anthropic.claude-3-5-sonnet-20240620-v1:0"
     }
 ]
 
 claude_3_5_sonnet_v2_models = [   # Sonnet 3.5 V2
     {
-        "bedrock_region": "us-west-2", # Oregon
+        "bedrock_region": "ap-northeast-2",
         "model_type": "claude",
         "model_id": "anthropic.claude-3-5-sonnet-20241022-v2:0"
-    },
-    {
-        "bedrock_region": "us-east-1", # N.Virginia
-        "model_type": "claude",
-        "model_id": "us.anthropic.claude-3-5-sonnet-20241022-v2:0"
-    },
-    {
-        "bedrock_region": "us-east-2", # Ohio
-        "model_type": "claude",
-        "model_id": "us.anthropic.claude-3-5-sonnet-20241022-v2:0"
     }
 ]
 
 claude_3_0_sonnet_models = [   # Sonnet 3.0
     {
-        "bedrock_region": "us-west-2", # Oregon
-        "model_type": "claude",
-        "model_id": "anthropic.claude-3-sonnet-20240229-v1:0"
-    },
-    {
-        "bedrock_region": "us-east-1", # N.Virginia
+        "bedrock_region": "ap-northeast-2",
         "model_type": "claude",
         "model_id": "anthropic.claude-3-sonnet-20240229-v1:0"
     }
@@ -247,25 +112,15 @@ claude_3_0_sonnet_models = [   # Sonnet 3.0
 
 claude_3_5_haiku_models = [   # Haiku 3.5 
     {
-        "bedrock_region": "us-west-2", # Oregon
+        "bedrock_region": "ap-northeast-2",
         "model_type": "claude",
         "model_id": "anthropic.claude-3-5-haiku-20241022-v1:0"
-    },
-    {
-        "bedrock_region": "us-east-1", # N.Virginia
-        "model_type": "claude",
-        "model_id": "us.anthropic.claude-3-5-haiku-20241022-v1:0"
-    },
-    {
-        "bedrock_region": "us-east-2", # Ohio
-        "model_type": "claude",
-        "model_id": "us.anthropic.claude-3-5-haiku-20241022-v1:0"
     }
 ]
 
 openai_oss_120b_models = [
     {
-        "bedrock_region": "us-west-2", # Oregon
+        "bedrock_region": "ap-northeast-2",
         "model_type": "openai",
         "model_id": "openai.gpt-oss-120b-1:0"
     }
@@ -273,7 +128,7 @@ openai_oss_120b_models = [
 
 openai_oss_20b_models = [
     {
-        "bedrock_region": "us-west-2", # Oregon
+        "bedrock_region": "ap-northeast-2",
         "model_type": "openai",
         "model_id": "openai.gpt-oss-20b-1:0"
     }
