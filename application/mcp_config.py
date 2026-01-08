@@ -30,8 +30,18 @@ def load_config(mcp_type):
         mcp_type = "repl_coder"
     elif mcp_type == "knowledge base":
         mcp_type = "kb-retriever"
+
+    if mcp_type == "basic":
+        return {
+            "mcpServers": {
+                "basic": {
+                    "command": "python",
+                    "args": [f"{workingDir}/mcp_server_basic.py"]
+                }
+            }
+        }
     
-    if mcp_type == "use-aws": 
+    elif mcp_type == "use-aws": 
         return {
             "mcpServers": {
                 "use-aws": {
