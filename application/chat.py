@@ -9,6 +9,7 @@ import info
 import utils
 import langgraph_agent
 import mcp_config
+from urllib import parse
 
 from io import BytesIO
 from PIL import Image
@@ -70,6 +71,9 @@ bedrock_region = config.get("region", "ap-northeast-2")
 
 accountId = config.get("accountId")
 knowledge_base_name = config.get("knowledge_base_name")
+
+path = config.get('sharing_url', '')
+doc_prefix = "docs/"
 
 MSG_LENGTH = 100    
 
@@ -776,9 +780,8 @@ def retrieve(query):
                 uri = location["s3Location"]["uri"] if location["s3Location"]["uri"] is not None else ""
                 
                 name = uri.split("/")[-1]
-                # encoded_name = parse.quote(name)                
-                # url = f"{path}/{doc_prefix}{encoded_name}"
-                url = uri # TODO: add path and doc_prefix
+                encoded_name = parse.quote(name)                
+                url = f"{path}/{doc_prefix}{encoded_name}"
                 
             elif "webLocation" in location:
                 url = location["webLocation"]["url"] if location["webLocation"]["url"] is not None else ""
@@ -838,13 +841,13 @@ def run_rag_with_knowledge_base(query, st):
         logger.info(f"error message: {err_msg}")                    
         raise Exception ("Not able to request to LLM")
     
-    # if relevant_docs:
-    #     ref = "\n\n### Reference\n"
-    #     for i, doc in enumerate(relevant_docs):
-    #         page_content = doc["contents"][:100].replace("\n", "")
-    #         ref += f"{i+1}. [{doc["reference"]['title']}]({doc["reference"]['url']}), {page_content}...\n"    
-    #     logger.info(f"ref: {ref}")
-    #     msg += ref
+    if relevant_docs:
+        ref = "\n\n### Reference\n"
+        for i, doc in enumerate(relevant_docs):
+            page_content = doc["contents"][:100].replace("\n", "")
+            ref += f"{i+1}. [{doc["reference"]['title']}]({doc["reference"]['url']}), {page_content}...\n"    
+        logger.info(f"ref: {ref}")
+        msg += ref
     
     return msg, reference_docs
    
@@ -1061,7 +1064,22 @@ def get_tool_info(tool_name, tool_content):
                     for url in path:
                         urls.append(url)
                 else:
-                    urls.append(path)            
+                    urls.append(path)
+            elif isinstance(json_data, list):  # Parse JSON from text field when json_data is a list
+                for item in json_data:
+                    if isinstance(item, dict) and "text" in item:
+                        try:
+                            text_json = json.loads(item["text"])
+                            if isinstance(text_json, dict) and "path" in text_json:
+                                path = text_json["path"]
+                                if isinstance(path, list):
+                                    for url in path:
+                                        urls.append(url)
+                                else:
+                                    urls.append(path)
+                        except (json.JSONDecodeError, TypeError):
+                            pass            
+
 
             if isinstance(json_data, dict):
                 for item in json_data:
@@ -1075,11 +1093,40 @@ def get_tool_info(tool_name, tool_content):
                             "title": title,
                             "content": content_text
                         })
-            else:
-                logger.info(f"json_data is not a dict: {json_data}")
-
+            elif isinstance(json_data, list):
+                logger.info(f"json_data is a list: {json_data}")
                 for item in json_data:
-                    if "reference" in item and "contents" in item:
+                    if isinstance(item, dict) and "text" in item:
+                        try:
+                            # text 필드 안의 JSON 문자열 파싱
+                            text_json = json.loads(item["text"])
+                            if isinstance(text_json, list):
+                                # 파싱된 JSON이 리스트인 경우
+                                for ref_item in text_json:
+                                    if isinstance(ref_item, dict) and "reference" in ref_item and "contents" in ref_item:
+                                        url = ref_item["reference"]["url"]
+                                        title = ref_item["reference"]["title"]
+                                        content_text = ref_item["contents"][:100] + "..." if len(ref_item["contents"]) > 100 else ref_item["contents"]
+                                        tool_references.append({
+                                            "url": url,
+                                            "title": title,
+                                            "content": content_text
+                                        })
+                            elif isinstance(text_json, dict) and "reference" in text_json and "contents" in text_json:
+                                # 파싱된 JSON이 딕셔너리인 경우
+                                url = text_json["reference"]["url"]
+                                title = text_json["reference"]["title"]
+                                content_text = text_json["contents"][:100] + "..." if len(text_json["contents"]) > 100 else text_json["contents"]
+                                tool_references.append({
+                                    "url": url,
+                                    "title": title,
+                                    "content": content_text
+                                })
+                        except (json.JSONDecodeError, TypeError) as e:
+                            logger.warning(f"Failed to parse text JSON: {e}")
+                            pass
+                    elif isinstance(item, dict) and "reference" in item and "contents" in item:
+                        # 리스트 항목이 직접 reference를 가지고 있는 경우
                         url = item["reference"]["url"]
                         title = item["reference"]["title"]
                         content_text = item["contents"][:100] + "..." if len(item["contents"]) > 100 else item["contents"]
@@ -1269,12 +1316,12 @@ async def run_langgraph_agent(query, mcp_servers, history_mode, containers):
         result = "답변을 찾지 못하였습니다."        
     logger.info(f"result: {result}")
 
-    # if references:
-    #     ref = "\n\n### Reference\n"
-    #     for i, reference in enumerate(references):
-    #         page_content = reference['content'][:100].replace("\n", "")
-    #         ref += f"{i+1}. [{reference['title']}]({reference['url']}), {page_content}...\n"    
-    #     result += ref
+    if references:
+        ref = "\n\n### Reference\n"
+        for i, reference in enumerate(references):
+            page_content = reference['content'][:100].replace("\n", "")
+            ref += f"{i+1}. [{reference['title']}]({reference['url']}), {page_content}...\n"    
+        result += ref
     
     if containers is not None:
         containers['notification'][index].markdown(result)

@@ -3004,10 +3004,25 @@ def create_cloudfront_distribution(alb_info: Dict[str, str], s3_bucket_name: str
             "Compress": True
         },
         "CacheBehaviors": {
-            "Quantity": 1,
+            "Quantity": 2,
             "Items": [
                 {
                     "PathPattern": "/images/*",
+                    "TargetOriginId": f"s3-{project_name}",
+                    "ViewerProtocolPolicy": "redirect-to-https",
+                    "AllowedMethods": {
+                        "Quantity": 2,
+                        "Items": ["GET", "HEAD"],
+                        "CachedMethods": {
+                            "Quantity": 2,
+                            "Items": ["GET", "HEAD"]
+                        }
+                    },
+                    "CachePolicyId": "4135ea2d-6df8-44a3-9df3-4b5a84be39ad",
+                    "Compress": True
+                },
+                {
+                    "PathPattern": "/docs/*",
                     "TargetOriginId": f"s3-{project_name}",
                     "ViewerProtocolPolicy": "redirect-to-https",
                     "AllowedMethods": {
