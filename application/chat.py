@@ -67,7 +67,7 @@ debug_messages = []  # List to store debug messages
 config = utils.load_config()
 print(f"config: {config}")
 
-projectName = config.get("projectName", "es")
+projectName = config.get("projectName", "es-kr")
 bedrock_region = config.get("region", "ap-northeast-2")
 
 accountId = config.get("accountId")
@@ -772,25 +772,21 @@ def retrieve(query):
             logger.warning(f"ResourceNotFoundException occurred: {e}")
             logger.info("Attempting to update knowledge_base_id...")
             
-            bedrock_region_local = config.get('region', 'us-west-2')
-            projectName_local = config.get('projectName')
-
-            # Create bedrock-agent client with same credentials as bedrock-agent-runtime client
             if aws_access_key and aws_secret_key:
                 bedrock_agent_client = boto3.client(
                     "bedrock-agent",
-                    region_name=bedrock_region_local,
+                    region_name=bedrock_region,
                     aws_access_key_id=aws_access_key,
                     aws_secret_access_key=aws_secret_key,
                     aws_session_token=aws_session_token,
                 )
             else:
-                bedrock_agent_client = boto3.client("bedrock-agent", region_name=bedrock_region_local)
+                bedrock_agent_client = boto3.client("bedrock-agent", region_name=bedrock_region)
             knowledge_base_list = bedrock_agent_client.list_knowledge_bases()
             
             updated = False
             for knowledge_base in knowledge_base_list.get("knowledgeBaseSummaries", []):
-                if knowledge_base["name"] == projectName_local:
+                if knowledge_base["name"] == projectName:
                     new_knowledge_base_id = knowledge_base["knowledgeBaseId"]
                     knowledge_base_id = new_knowledge_base_id
 
