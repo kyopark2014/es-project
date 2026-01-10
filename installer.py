@@ -2734,8 +2734,7 @@ def create_knowledge_base_with_opensearch(opensearch_info: Dict[str, str], knowl
     
     bedrock_agent_client = boto3.client("bedrock-agent", region_name=region)
     parsing_model_arn = f"arn:aws:bedrock:{region}:{account_id}:inference-profile/global.anthropic.claude-haiku-4-5-20251001-v1:0"
-    # parsing_model_arn = f"arn:aws:bedrock:{region}:{account_id}:inference-profile/global.anthropic.claude-sonnet-4-20250514-v1:0"
-    
+
     # Check if Knowledge Base already exists
     try:
         logger.info("  Checking if Knowledge Base already exists...")
@@ -2913,13 +2912,40 @@ def create_cloudfront_distribution(alb_info: Dict[str, str], s3_bucket_name: str
     try:
         distributions = cloudfront_client.list_distributions()
         for dist in distributions.get("DistributionList", {}).get("Items", []):
-            if (f"CloudFront-for-{project_name}" in dist.get("Comment", "") and 
-                dist.get("Enabled", False)):
-                logger.warning(f"CloudFront distribution already exists: {dist['DomainName']}")
-                return {
-                    "id": dist["Id"],
-                    "domain": dist["DomainName"]
-                }
+            if f"CloudFront-for-{project_name}" in dist.get("Comment", ""):
+                if dist.get("Enabled", False):
+                    logger.warning(f"CloudFront distribution already exists: {dist['DomainName']}")
+                    return {
+                        "id": dist["Id"],
+                        "domain": dist["DomainName"]
+                    }
+                else:
+                    # Distribution exists but is disabled, enable it
+                    logger.warning(f"CloudFront distribution exists but is disabled: {dist['DomainName']}")
+                    logger.info("  Enabling existing CloudFront distribution...")
+                    
+                    # Get current distribution config
+                    dist_config_response = cloudfront_client.get_distribution_config(Id=dist["Id"])
+                    dist_config = dist_config_response["DistributionConfig"]
+                    etag = dist_config_response["ETag"]
+                    
+                    # Enable the distribution
+                    dist_config["Enabled"] = True
+                    
+                    # Update the distribution
+                    cloudfront_client.update_distribution(
+                        Id=dist["Id"],
+                        DistributionConfig=dist_config,
+                        IfMatch=etag
+                    )
+                    
+                    logger.info(f"  ✓ Enabled CloudFront distribution: {dist['DomainName']}")
+                    logger.warning("  Note: CloudFront distribution may take 15-20 minutes to deploy")
+                    
+                    return {
+                        "id": dist["Id"],
+                        "domain": dist["DomainName"]
+                    }
     except Exception as e:
         logger.debug(f"Error checking existing distributions: {e}")
     
