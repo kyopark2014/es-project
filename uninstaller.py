@@ -7,8 +7,6 @@ This script deletes all AWS infrastructure resources created by installer.py.
 import boto3
 import time
 import logging
-from datetime import datetime
-from typing import Dict, List, Optional
 from botocore.exceptions import ClientError
 
 # Configuration
