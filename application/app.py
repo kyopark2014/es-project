@@ -20,7 +20,7 @@ logger = logging.getLogger("streamlit")
 os.environ["DEV"] = "true"  # Skip user confirmation of get_user_input
 
 # title
-st.set_page_config(page_title='es-kr', page_icon=None, layout="centered", initial_sidebar_state="auto", menu_items=None)
+st.set_page_config(page_title='es-us', page_icon=None, layout="centered", initial_sidebar_state="auto", menu_items=None)
 
 mode_descriptions = {
     "일상적인 대화": [
@@ -52,7 +52,7 @@ with st.sidebar:
         "여기에서는 MCP를 이용해 RAG를 구현하고, Multi agent를 이용해 다양한 기능을 구현할 수 있습니다." 
         "또한 번역이나 문법 확인과 같은 용도로 사용할 수 있습니다."
         "주요 코드는 LangChain과 LangGraph를 이용해 구현되었습니다.\n"
-        "상세한 코드는 [Github](https://github.com/kyopark2014/es-kr-project)을 참조하세요."
+        "상세한 코드는 [Github](https://github.com/kyopark2014/es-us-project)을 참조하세요."
     )
 
     st.subheader("🐱 대화 형태")
@@ -70,7 +70,7 @@ with st.sidebar:
 
         # Change radio to checkbox
         mcp_options = [
-            "basic", "use-aws", "tavily-search", "knowledge base", "code interpreter", "terminal", "filesystem", "aws_documentation","사용자 설정"
+            "basic", "use-aws", "tavily-search", "knowledge base", "code interpreter", "terminal (MAC)", "terminal (linux)", "filesystem", "aws_documentation","사용자 설정"
         ]
         mcp_selections = {}
         default_selections = ["basic", "knowledge base", "code interpreter", "aws_documentation"]
@@ -140,7 +140,7 @@ with st.sidebar:
             "Nova Pro", 
             "Nova Lite", 
             "Nova Micro",       
-        ), index=0
+        ), index=4
     )
 
     # debug checkbox
