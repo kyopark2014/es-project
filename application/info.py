@@ -106,7 +106,7 @@ claude_4_6_opus_models = [   # Claude 4.6 Opus
     }
 ]
 
-claude_4_6_claude_models = [   # Claude 4.6 Claude
+claude_4_6_sonnet_models = [   # Claude 4.6 Sonnet
     {
         "bedrock_region": "us-west-2", # Oregon
         "model_type": "claude",
@@ -344,8 +344,8 @@ def get_model_info(model_name):
         models = claude_4_5_sonnet_models
     elif model_name == "Claude 4.5 Haiku":
         models = claude_4_5_haiku_models
-    elif model_name == "Claude 4.6 Claude":
-        models = claude_4_6_claude_models
+    elif model_name == "Claude 4.6 Sonnet":
+        models = claude_4_6_sonnet_models
     elif model_name == "Claude 4.6 Opus":
         models = claude_4_6_opus_models
     elif model_name == "Nova Premier":
