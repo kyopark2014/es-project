@@ -20,8 +20,9 @@ logging.basicConfig(
 logger = logging.getLogger("qa-agent")
 
 async def run_qa_agent(query, containers):
-    global index
-    index = 0
+    queue = containers['queue'] if containers else None
+    if queue:
+        queue.reset()
 
     image_url = []
     references = []
@@ -105,26 +106,19 @@ async def run_qa_agent(query, containers):
                                 toolUseId = content_item.get('id', '')
                                 tool_name = content_item.get('name', '')
                                 logger.info(f"tool_name: {tool_name}, toolUseId: {toolUseId}")
-
-                                chat.tool_info_list[toolUseId] = index                     
-                                chat.tool_name_list[toolUseId] = tool_name     
+                                if queue:
+                                    queue.register_tool(toolUseId, tool_name)
                                                                         
                             if 'partial_json' in content_item:
                                 partial_json = content_item.get('partial_json', '')
-                                logger.info(f"partial_json: {partial_json}")
                                 
                                 if toolUseId not in chat.tool_input_list:
                                     chat.tool_input_list[toolUseId] = ""                                
                                 chat.tool_input_list[toolUseId] += partial_json
                                 input = chat.tool_input_list[toolUseId]
-                                logger.info(f"input: {input}")
 
-                                logger.info(f"tool_name: {tool_name}, input: {input}, toolUseId: {toolUseId}")
-                                # add_notification(containers, f"Tool: {tool_name}, Input: {input}")
-                                index = chat.tool_info_list[toolUseId]
-
-                                if chat.debug_mode == "Enable":
-                                    containers['notification'][index].info(f"Tool: {tool_name}, Input: {input}")
+                                if queue and chat.debug_mode == "Enable":
+                                    queue.tool_update(toolUseId, f"Tool: {tool_name}, Input: {input}")
                         
         elif isinstance(output, tuple) and len(output) > 0 and isinstance(output[0], ToolMessage):
             message = output[0]
@@ -163,7 +157,6 @@ async def run_qa_agent(query, containers):
             ref += f"{i+1}. [{reference['title']}]({reference['url']}), {page_content}...\n"    
         result += ref
     
-    if containers is not None:
-        containers['notification'][index].markdown(result)
+    chat.update_final_result(containers, result)
     
     return result
