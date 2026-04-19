@@ -70,6 +70,8 @@ with st.sidebar:
             "trade info", 
             "weather", 
             "web_fetch",
+            "code interpreter",
+            "use-aws",
             "사용자 설정"
         ]
         mcp_selections = {}

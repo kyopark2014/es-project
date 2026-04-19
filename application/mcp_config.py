@@ -38,6 +38,8 @@ def load_config(mcp_type):
         mcp_type = "trade-info"
     elif mcp_type == "weather":
         mcp_type = "korea-weather"
+    elif mcp_type == "code interpreter":
+        mcp_type = "repl-coder"
     
     if mcp_type == "tavily":
         return {
@@ -105,6 +107,31 @@ def load_config(mcp_type):
                 }
             }
         }
+    
+    elif mcp_type == "repl_coder":
+        return {
+            "mcpServers": {
+                "repl_coder": {
+                    "command": "python",
+                    "args": [
+                        f"{workingDir}/mcp_server_repl_coder.py"
+                    ]
+                }
+            }
+        }    
+    
+    elif mcp_type == "use-aws":
+        return {
+            "mcpServers": {
+                "use-aws": {
+                    "command": "python",
+                    "args": [
+                        f"{workingDir}/mcp_server_use_aws.py"
+                    ]
+                }
+            }
+        }
+    
     
     elif mcp_type == "사용자 설정":
         return mcp_user_config
