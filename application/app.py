@@ -6,7 +6,6 @@ import logging
 import sys
 import os
 import asyncio
-import qa_agent
 from notification_queue import NotificationQueue
 
 logging.basicConfig(
@@ -18,10 +17,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger("streamlit")
 
-os.environ["DEV"] = "true"  # Skip user confirmation of get_user_input
-
 # title
-st.set_page_config(page_title='es-us', page_icon=None, layout="centered", initial_sidebar_state="auto", menu_items=None)
+st.set_page_config(page_title='ES', page_icon=None, layout="centered", initial_sidebar_state="auto", menu_items=None)
 
 mode_descriptions = {
     "일상적인 대화": [
@@ -36,9 +33,6 @@ mode_descriptions = {
     "Agent (Chat)": [
         "MCP를 활용한 Agent를 이용합니다. 채팅 히스토리를 이용해 interative한 대화를 즐길 수 있습니다."
     ],
-    "QA Agent": [
-        "RAG를 이용해 얻은 정보로 Test Case를 생성합니다."
-    ],
     "이미지 분석": [
         "이미지를 선택하여 멀티모달을 이용하여 분석합니다."
     ]
@@ -50,17 +44,16 @@ with st.sidebar:
     
     st.markdown(
         "Amazon Bedrock을 이용해 다양한 형태의 대화를 구현합니다." 
-        "여기에서는 MCP를 이용해 RAG를 구현하고, Multi agent를 이용해 다양한 기능을 구현할 수 있습니다." 
-        "또한 번역이나 문법 확인과 같은 용도로 사용할 수 있습니다."
+        "여기에서는 MCP를 이용해 RAG를 비롯한 데이터 분석용 기능을 구현합니다." 
         "주요 코드는 LangChain과 LangGraph를 이용해 구현되었습니다.\n"
-        "상세한 코드는 [Github](https://github.com/kyopark2014/es-us-project)을 참조하세요."
+        "상세한 코드는 [Github](https://github.com/kyopark2014/power-trade)을 참조하세요."
     )
 
     st.subheader("🐱 대화 형태")
     
     # radio selection
     mode = st.radio(
-        label="원하는 대화 형태를 선택하세요. ",options=["일상적인 대화", "RAG", "Agent", "Agent (Chat)", "QA Agent", "이미지 분석"], index=3
+        label="원하는 대화 형태를 선택하세요. ",options=["일상적인 대화", "RAG", "Agent", "Agent (Chat)", "이미지 분석"], index=3
     )   
     st.info(mode_descriptions[mode][0])
     
@@ -71,20 +64,16 @@ with st.sidebar:
 
         # Change radio to checkbox
         mcp_options = [
-            "basic", 
-            "use-aws", 
-            "tavily-search", 
+            "tavily", 
             "knowledge base", 
-            "aws_documentation", 
-            "trade_info", 
-            "code interpreter", 
-            "terminal (MAC)", 
-            "terminal (linux)", 
-            "filesystem", 
+            "aws documentation", 
+            "trade info", 
+            "weather", 
+            "web_fetch",
             "사용자 설정"
         ]
         mcp_selections = {}
-        default_selections = ["basic", "knowledge base", "code interpreter", "aws_documentation"]
+        default_selections = ["tavily", "knowledge base", "aws documentation"]
         
         with st.expander("MCP 옵션 선택", expanded=True):
             for option in mcp_options:
@@ -136,24 +125,12 @@ with st.sidebar:
         '🖊️ 사용 모델을 선택하세요',
         (
             "Claude 4.6 Sonnet",
+            "Claude 4.7 Opus",
             "Claude 4.6 Opus",
             "Claude 4.5 Haiku",
             "Claude 4.5 Sonnet",
-            "Claude 4.5 Opus",  
-            "Claude 4 Opus", 
-            "Claude 4 Sonnet", 
-            "Claude 3.7 Sonnet", 
-            "Claude 3.5 Sonnet", 
-            "Claude 3.0 Sonnet", 
-            "Claude 3.5 Haiku", 
-            "OpenAI OSS 120B",
-            "OpenAI OSS 20B",
-            "Nova 2 Lite",
-            "Nova Premier", 
-            "Nova Pro", 
-            "Nova Lite", 
-            "Nova Micro",       
-        ), index=2
+            "Claude 4.5 Opus"
+        ), index=0
     )
 
     # debug checkbox
@@ -161,28 +138,12 @@ with st.sidebar:
     debugMode = 'Enable' if select_debugMode else 'Disable'
     #print('debugMode: ', debugMode)
 
-    # extended thinking of claude 3.7 sonnet
-    reasoningMode = "Disable"
-    if mode == "일상적인 대화" or mode == "RAG":
-        select_reasoning = st.checkbox('Reasoning', value=False)
-        reasoningMode = 'Enable' if select_reasoning else 'Disable'
-        # logger.info(f"reasoningMode: {reasoningMode}")
-
-    # RAG grading
-    # select_grading = st.checkbox('Grading', value=False)
-    # gradingMode = 'Enable' if select_grading else 'Disable'
-    gradingMode = 'Disable'
-    # logger.info(f"gradingMode: {gradingMode}")
-
     uploaded_file = None
     if mode=='이미지 분석':
         st.subheader("🌇 이미지 업로드")
         uploaded_file = st.file_uploader("이미지 분석을 위한 파일을 선택합니다.", type=["png", "jpg", "jpeg"])
-    elif mode=='RAG' or mode=="Agent" or mode=="Agent (Chat)":
-        st.subheader("📋 문서 업로드")
-        uploaded_file = st.file_uploader("RAG를 위한 파일을 선택합니다.", type=["pdf", "txt", "py", "md", "csv", "json"], key=chat.fileId)
 
-    chat.update(modelName, debugMode, reasoningMode)    
+    chat.update(modelName, debugMode)    
 
     st.success(f"Connected to {modelName}", icon="💚")
     clear_button = st.button("대화 초기화", key="clear")
@@ -323,17 +284,16 @@ if prompt := st.chat_input("메시지를 입력하세요."):
                 history_mode = "Enable"
 
             with st.status("thinking...", expanded=True, state="running") as status:
-                containers = {
-                    "tools": st.empty(),
-                    "status": st.empty(),
-                    "queue": NotificationQueue(container=status),
-                }
+                notification_queue = NotificationQueue(container=status)
 
                 response, image_url = asyncio.run(chat.run_langgraph_agent(
                     query=prompt, 
                     mcp_servers=mcp_servers, 
                     history_mode=history_mode, 
-                    containers=containers))
+                    notification_queue=notification_queue))
+
+                if debugMode == "Disable":
+                    st.markdown(response)
 
             st.session_state.messages.append({
                 "role": "assistant", 
@@ -345,17 +305,6 @@ if prompt := st.chat_input("메시지를 입력하세요."):
                 logger.info(f"url: {url}")
                 file_name = url[url.rfind('/')+1:]
                 st.image(url, caption=file_name, use_container_width=True)
-        
-        elif mode == "QA Agent":
-            with st.status("thinking...", expanded=True, state="running") as status:
-                containers = {
-                    "tools": st.empty(),
-                    "status": st.empty(),
-                    "queue": NotificationQueue(container=status),
-                }
-                response = asyncio.run(qa_agent.run_qa_agent(prompt, containers))
-                logger.info(f"response: {response}")
-                st.session_state.messages.append({"role": "assistant", "content": response})
         
         elif mode == "이미지 분석":
             if uploaded_file is None or uploaded_file == "":

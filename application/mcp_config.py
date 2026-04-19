@@ -30,24 +30,16 @@ logger.info(f"contents_dir: {contents_dir}")
 mcp_user_config = {}    
 
 def load_config(mcp_type):
-    if mcp_type == "code interpreter":
-        mcp_type = "repl_coder"
-    elif mcp_type == "knowledge base":
+    if mcp_type == "knowledge base":
         mcp_type = "kb-retriever"
-
-    if mcp_type == "basic":
-        return {
-            "mcpServers": {
-                "search": {
-                    "command": "python",
-                    "args": [
-                        f"{workingDir}/mcp_server_basic.py"
-                    ]
-                }
-            }
-        }
+    elif mcp_type == "aws documentation":
+        mcp_type = "aws-documentation"    
+    elif mcp_type == "trade info":
+        mcp_type = "trade-info"
+    elif mcp_type == "weather":
+        mcp_type = "korea-weather"
     
-    elif mcp_type == "tavily-search":
+    if mcp_type == "tavily":
         return {
             "mcpServers": {
                 "tavily-search": {
@@ -58,86 +50,28 @@ def load_config(mcp_type):
                 }
             }
         }
-        
-    elif mcp_type == "use-aws": 
+    
+    elif mcp_type == "korea-weather":
         return {
             "mcpServers": {
-                "use-aws": {
+                "korea-weather": {
                     "command": "python",
-                    "args": [
-                        f"{workingDir}/mcp_server_use_aws.py"
-                    ]
+                    "args": [f"{workingDir}/mcp_server_korea_weather.py"]
                 }
             }
         }
-    
+        
     elif mcp_type == "kb-retriever":
         return {
             "mcpServers": {
-                "kb_retriever": {
+                "kb-retriever": {
                     "command": "python",
                     "args": [f"{workingDir}/mcp_server_retrieve.py"]
                 }
             }
         }
     
-    elif mcp_type == "repl_coder":
-        return {
-            "mcpServers": {
-                "repl_coder": {
-                    "command": "python",
-                    "args": [
-                        f"{workingDir}/mcp_server_repl_coder.py"
-                    ]
-                }
-            }
-        }    
-
-    elif mcp_type == "terminal (MAC)":
-        return {
-            "mcpServers": {
-                "iterm-mcp": {
-                    "command": "npx",
-                    "args": [
-                        "-y",
-                        "iterm-mcp"
-                    ]
-                }
-            }
-        }
-    
-    elif mcp_type == "terminal (linux)":
-        return {
-            "mcpServers": {
-                "terminal-control": {
-                    "command": "terminal-control-mcp",
-                    "args": [],
-                    "env": {
-                        "TERMINAL_CONTROL_SECURITY_LEVEL": "low"  # "off", "low", "medium", "high" 중 선택
-                    }
-                }
-            }
-        }    
-    
-    elif mcp_type == "filesystem":
-        parent_dir = os.path.dirname(workingDir)
-        contents_dir = os.path.join(parent_dir, "contents")
-        return {
-            "mcpServers": {
-                "filesystem": {
-                    "command": "npx",
-                    "args": [
-                        "-y",
-                        "@modelcontextprotocol/server-filesystem",
-                        f"{parent_dir}",
-                        f"{workingDir}",
-                        f"{contents_dir}"
-                    ]
-                }
-            }
-        }    
-    
-    elif mcp_type == "aws_documentation":
+    elif mcp_type == "aws-documentation":
         return {
             "mcpServers": {
                 "awslabs.aws-documentation-mcp-server": {
@@ -150,10 +84,10 @@ def load_config(mcp_type):
             }
         }
 
-    elif mcp_type == "trade_info":
+    elif mcp_type == "trade-info":
         return {
             "mcpServers": {
-                "trade_info": {
+                "trade-info": {
                     "command": "python",
                     "args": [
                         f"{workingDir}/mcp_server_trade_info.py"
@@ -161,6 +95,16 @@ def load_config(mcp_type):
                 }
             }
         }    
+    
+    elif mcp_type == "web_fetch":
+        return {
+            "mcpServers": {
+                "web_fetch": {
+                    "command": "npx",
+                    "args": ["-y", "mcp-server-fetch-typescript"]
+                }
+            }
+        }
     
     elif mcp_type == "사용자 설정":
         return mcp_user_config

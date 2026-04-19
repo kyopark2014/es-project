@@ -9,8 +9,6 @@ import info
 import utils
 import langgraph_agent
 import mcp_config
-import csv
-import PyPDF2
 from langchain_core.documents import Document
 from urllib import parse
 
@@ -84,21 +82,14 @@ doc_prefix = "docs/"
 
 MSG_LENGTH = 100    
 
-model_name = "Claude 4 Sonnet"
+model_name = "Claude 4.6 Sonnet"
 model_type = "claude"
 models = info.get_model_info(model_name)
-number_of_models = len(models)
-model_id = models[0]["model_id"]
+model_id = models["model_id"]
 debug_mode = "Enable"
+user_id = "agent"
 
-aws_access_key = config.get('aws', {}).get('access_key_id')
-aws_secret_key = config.get('aws', {}).get('secret_access_key')
-aws_session_token = config.get('aws', {}).get('session_token')
-
-reasoning_mode = 'Disable'
-user_id = "mcp"
-
-def update(modelName, debugMode, reasoningMode):    
+def update(modelName, debugMode):    
     global model_name, model_id, model_type, debug_mode, reasoning_mode
     global models, user_id
 
@@ -107,18 +98,12 @@ def update(modelName, debugMode, reasoningMode):
         logger.info(f"model_name: {model_name}")
         
         models = info.get_model_info(model_name)
-        model_id = models[0]["model_id"]
-        model_type = models[0]["model_type"]
+        model_id = models["model_id"]
+        model_type = models["model_type"]
                                 
     if debug_mode != debugMode:
         debug_mode = debugMode        
         logger.info(f"debug_mode: {debug_mode}")
-
-    if reasoning_mode != reasoningMode:
-        reasoning_mode = reasoningMode
-        logger.info(f"reasoning_mode: {reasoning_mode}")    
-
-    # logger.info(f"mcp.env updated: {mcp_env}")
 
 map_chain = dict() 
 checkpointers = dict() 
@@ -129,7 +114,9 @@ checkpointer = MemorySaver()
 memorystore = InMemoryStore()
 
 def initiate():
-    global memory_chain, checkpointer, memorystore, checkpointers, memorystores
+    global memory_chain, checkpointer, memorystore, checkpointers, memorystores, user_id
+
+    user_id = uuid.uuid4().hex
 
     if user_id in map_chain:  
         logger.info(f"memory exist. reuse it!")
@@ -173,416 +160,64 @@ def save_chat_history(text, msg):
         else:
             memory_chain.chat_memory.add_ai_message(msg) 
 
-selected_chat = 0
 def get_max_output_tokens(model_id: str = "") -> int:
     """Return the max output tokens based on the model ID."""
-    if "claude-4" in model_id or "claude-sonnet-4" in model_id or "claude-opus-4" in model_id or "claude-haiku-4" in model_id:
-        return 16384
+    if "claude-opus-4-6" in model_id:
+        return 128000
+    if "claude-opus-4-5" in model_id:
+        return 64000
+    if "claude-opus-4" in model_id or "claude-4-opus" in model_id:
+        return 32000
+    if "claude-sonnet-4" in model_id or "claude-4-sonnet" in model_id or "claude-haiku-4" in model_id:
+        return 64000
     return 8192
     
-def get_chat(extended_thinking):
-    global selected_chat, model_type
+def get_chat():
+    global model_type
 
     logger.info(f"models: {models}")
-    logger.info(f"selected_chat: {selected_chat}")
     
-    profile = models[selected_chat]
-    # print('profile: ', profile)
-        
-    bedrock_region =  profile['bedrock_region']
-    modelId = profile['model_id']
-    model_type = profile['model_type']
+    modelId = models['model_id']
+    model_type = models['model_type']
     if model_type == 'claude':
         maxOutputTokens = get_max_output_tokens(modelId)
     else:
         maxOutputTokens = 5120 # 5k
-    number_of_models = len(models)
 
-    logger.info(f"LLM: {selected_chat}, bedrock_region: {bedrock_region}, modelId: {modelId}, model_type: {model_type}")
+    logger.info(f"modelId: {modelId}, model_type: {model_type}")
 
-    if profile['model_type'] == 'nova':
-        STOP_SEQUENCE = '"\n\n<thinking>", "\n<thinking>", " <thinking>"'
-    elif profile['model_type'] == 'claude':
-        STOP_SEQUENCE = "\n\nHuman:" 
-    elif profile['model_type'] == 'openai':
-        STOP_SEQUENCE = "" 
+    STOP_SEQUENCE = "\n\nHuman:" 
                           
     # bedrock   
-    if aws_access_key and aws_secret_key:
-        boto3_bedrock = boto3.client(
-            service_name='bedrock-runtime',
-            region_name=bedrock_region,
-            aws_access_key_id=aws_access_key,
-            aws_secret_access_key=aws_secret_key,
-            aws_session_token=aws_session_token,
-            config=Config(
-                retries = {
-                    'max_attempts': 30
-                }
-            )
-        )
-    else:
-        boto3_bedrock = boto3.client(
-            service_name='bedrock-runtime',
-            region_name=bedrock_region,
-            config=Config(
-                retries = {
-                    'max_attempts': 30
-                }
-            )
-        )
-
-    if profile['model_type'] != 'openai' and extended_thinking=='Enable':
-        maxReasoningOutputTokens=64000
-        logger.info(f"extended_thinking: {extended_thinking}")
-        thinking_budget = min(maxOutputTokens, maxReasoningOutputTokens-1000)
-
-        parameters = {
-            "max_tokens":maxReasoningOutputTokens,
-            "temperature":1,            
-            "thinking": {
-                "type": "enabled",
-                "budget_tokens": thinking_budget
+    boto3_bedrock = boto3.client(
+        service_name='bedrock-runtime',
+        region_name=bedrock_region,
+        config=Config(
+            retries = {
+                'max_attempts': 30
             },
-            "stop_sequences": [STOP_SEQUENCE]
-        }
-    elif profile['model_type'] != 'openai' and extended_thinking=='Disable':
-        parameters = {
-            "max_tokens":maxOutputTokens,     
-            "temperature":0.1,
-            "top_k":250,
-            "stop_sequences": [STOP_SEQUENCE]
-        }
-    elif profile['model_type'] == 'openai':
-        parameters = {
-            "max_tokens":maxOutputTokens,     
-            "temperature":0.1,
-            "top_k":250,
-        }
+            read_timeout=300
+        )
+    )
+
+    parameters = {
+        "max_tokens":maxOutputTokens,     
+        "temperature":0.1,
+        "top_k":250,
+        "stop_sequences": [STOP_SEQUENCE]
+    }
 
     chat = ChatBedrock(   # new chat model
         model_id=modelId,
         client=boto3_bedrock, 
         model_kwargs=parameters,
-        region_name=bedrock_region
+        region_name=utils.bedrock_region,
+        provider="anthropic"
     )
     
-    selected_chat = 0
-
     return chat
 
-def print_doc(i, doc):
-    if len(doc.page_content)>=100:
-        text = doc.page_content[:100]
-    else:
-        text = doc.page_content
-            
-    logger.info(f"{i}: {text}, metadata:{doc.metadata}")
-
-def translate_text(text):
-    chat = get_chat(extended_thinking=reasoning_mode)
-
-    system = (
-        "You are a helpful assistant that translates {input_language} to {output_language} in <article> tags. Put it in <result> tags."
-    )
-    human = "<article>{text}</article>"
-    
-    prompt = ChatPromptTemplate.from_messages([("system", system), ("human", human)])
-    # print('prompt: ', prompt)
-    
-    if isKorean(text)==False :
-        input_language = "English"
-        output_language = "Korean"
-    else:
-        input_language = "Korean"
-        output_language = "English"
-                        
-    chain = prompt | chat    
-    try: 
-        result = chain.invoke(
-            {
-                "input_language": input_language,
-                "output_language": output_language,
-                "text": text,
-            }
-        )
-        msg = result.content
-        logger.info(f"translated text: {msg}")
-    except Exception:
-        err_msg = traceback.format_exc()
-        logger.info(f"error message: {err_msg}")      
-        raise Exception ("Not able to request to LLM")
-
-    return msg[msg.find('<result>')+8:len(msg)-9] # remove <result> tag
-    
 reference_docs = []
-
-# load documents from s3 for pdf and txt
-def load_document(file_type, s3_file_name):
-    s3r = boto3.resource("s3")
-    doc = s3r.Object(s3_bucket, s3_prefix+'/'+s3_file_name)
-    logger.info(f"s3_bucket: {s3_bucket}, s3_prefix: {s3_prefix}, s3_file_name: {s3_file_name}")
-    
-    contents = ""
-    if file_type == 'pdf':
-        contents = doc.get()['Body'].read()
-        reader = PyPDF2.PdfReader(BytesIO(contents))
-        
-        raw_text = []
-        for page in reader.pages:
-            raw_text.append(page.extract_text())
-        contents = '\n'.join(raw_text)    
-        
-    elif file_type == 'txt' or file_type == 'md':        
-        contents = doc.get()['Body'].read().decode('utf-8')
-        
-    logger.info(f"contents: {contents}")
-    new_contents = str(contents).replace("\n"," ") 
-    logger.info(f"length: {len(new_contents)}")
-
-    text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=1000,
-        chunk_overlap=100,
-        separators=["\n\n", "\n", ".", " ", ""],
-        length_function = len,
-    ) 
-    texts = text_splitter.split_text(new_contents) 
-    if texts:
-        logger.info(f"exts[0]: {texts[0]}")
-    
-    return texts
-
-# load csv documents from s3
-def load_csv_document(s3_file_name):
-    s3r = boto3.resource("s3")
-    doc = s3r.Object(s3_bucket, s3_prefix+'/'+s3_file_name)
-
-    lines = doc.get()['Body'].read().decode('utf-8').split('\n')   # read csv per line
-    logger.info(f"prelinspare: {len(lines)}")
-        
-    columns = lines[0].split(',')  # get columns
-    #columns = ["Category", "Information"]  
-    #columns_to_metadata = ["type","Source"]
-    logger.info(f"columns: {columns}")
-    
-    docs = []
-    n = 0
-    for row in csv.DictReader(lines, delimiter=',',quotechar='"'):
-        # print('row: ', row)
-        #to_metadata = {col: row[col] for col in columns_to_metadata if col in row}
-        values = {k: row[k] for k in columns if k in row}
-        content = "\n".join(f"{k.strip()}: {v.strip()}" for k, v in values.items())
-        doc = Document(
-            page_content=content,
-            metadata={
-                'name': s3_file_name,
-                'row': n+1,
-            }
-            #metadata=to_metadata
-        )
-        docs.append(doc)
-        n = n+1
-    logger.info(f"docs[0]: {docs[0]}")
-
-    return docs
-
-def summary_of_code(code, mode):
-    if mode == 'py':
-        system = (
-            "다음의 <article> tag에는 python code가 있습니다."
-            "code의 전반적인 목적에 대해 설명하고, 각 함수의 기능과 역할을 자세하게 한국어 500자 이내로 설명하세요."
-        )
-    elif mode == 'js':
-        system = (
-            "다음의 <article> tag에는 node.js code가 있습니다." 
-            "code의 전반적인 목적에 대해 설명하고, 각 함수의 기능과 역할을 자세하게 한국어 500자 이내로 설명하세요."
-        )
-    else:
-        system = (
-            "다음의 <article> tag에는 code가 있습니다."
-            "code의 전반적인 목적에 대해 설명하고, 각 함수의 기능과 역할을 자세하게 한국어 500자 이내로 설명하세요."
-        )
-    
-    human = "<article>{code}</article>"
-    
-    prompt = ChatPromptTemplate.from_messages([("system", system), ("human", human)])
-    # print('prompt: ', prompt)
-    
-    llm = get_chat(extended_thinking=reasoning_mode)
-
-    chain = prompt | llm    
-    try: 
-        result = chain.invoke(
-            {
-                "code": code
-            }
-        )
-        
-        summary = result.content
-        logger.info(f"result of code summarization: {summary}")
-    except Exception:
-        err_msg = traceback.format_exc()
-        logger.info(f"error message: {err_msg}")        
-        raise Exception ("Not able to request to LLM")
-    
-    return summary
-
-
-fileId = uuid.uuid4().hex
-# print('fileId: ', fileId)
-def get_summary_of_uploaded_file(file_name, st):
-    file_type = file_name[file_name.rfind('.')+1:len(file_name)]            
-    logger.info(f"file_type: {file_type}")
-    
-    if file_type == 'csv':
-        docs = load_csv_document(file_name)
-        contexts = []
-        for doc in docs:
-            contexts.append(doc.page_content)
-        logger.info(f"contexts: {contexts}")
-    
-        msg = get_summary(contexts)
-
-    elif file_type == 'pdf' or file_type == 'txt' or file_type == 'md' or file_type == 'pptx' or file_type == 'docx':
-        texts = load_document(file_type, file_name)
-
-        if len(texts):
-            docs = []
-            for i in range(len(texts)):
-                docs.append(
-                    Document(
-                        page_content=texts[i],
-                        metadata={
-                            'name': file_name,
-                            # 'page':i+1,
-                            'url': path+'/'+doc_prefix+parse.quote(file_name)
-                        }
-                    )
-                )
-            logger.info(f"docs[0]: {docs[0]}") 
-            logger.info(f"docs size: {len(docs)}")
-
-            contexts = []
-            for doc in docs:
-                contexts.append(doc.page_content)
-            logger.info(f"contexts: {contexts}")
-
-            msg = get_summary(contexts)
-        else:
-            msg = "문서 로딩에 실패하였습니다."
-        
-    elif file_type == 'py' or file_type == 'js':
-        s3r = boto3.resource("s3")
-        doc = s3r.Object(s3_bucket, s3_prefix+'/'+file_name)
-        
-        contents = doc.get()['Body'].read().decode('utf-8')
-        
-        #contents = load_code(file_type, object)                
-                        
-        msg = summary_of_code(contents, file_type)                  
-        
-    elif file_type == 'png' or file_type == 'jpeg' or file_type == 'jpg':
-        logger.info(f"multimodal: {file_name}")
-        
-        s3_client = boto3.client(
-            service_name='s3',
-            region_name=bedrock_region,
-        )
-
-        if debug_mode=="Enable":
-            status = "이미지를 가져옵니다."
-            logger.info(f"status: {status}")
-            st.info(status)
-            
-        image_obj = s3_client.get_object(Bucket=s3_bucket, Key=s3_prefix+'/'+file_name)
-        # print('image_obj: ', image_obj)
-        
-        image_content = image_obj['Body'].read()
-        img = Image.open(BytesIO(image_content))
-        
-        width, height = img.size 
-        logger.info(f"width: {width}, height: {height}, size: {width*height}")
-        
-        # Image resizing and size verification
-        isResized = False
-        max_size = 5 * 1024 * 1024  # 5MB in bytes
-        
-        # Initial resizing (based on pixel count)
-        while(width*height > 2000000):  # Limit to approximately 2M pixels
-            width = int(width/2)
-            height = int(height/2)
-            isResized = True
-            logger.info(f"width: {width}, height: {height}, size: {width*height}")
-        
-        if isResized:
-            img = img.resize((width, height))
-        
-        # Base64 크기 확인 및 추가 리사이징
-        max_attempts = 5
-        for attempt in range(max_attempts):
-            buffer = BytesIO()
-            img.save(buffer, format="PNG", optimize=True)
-            img_bytes = buffer.getvalue()
-            img_base64 = base64.b64encode(img_bytes).decode("utf-8")
-            
-            # Base64 크기 확인 (실제 전송될 크기)
-            base64_size = len(img_base64.encode('utf-8'))
-            logger.info(f"attempt {attempt + 1}: base64_size = {base64_size} bytes")
-            
-            if base64_size <= max_size:
-                break
-            else:
-                # 크기가 여전히 크면 더 작게 리사이징
-                width = int(width * 0.8)
-                height = int(height * 0.8)
-                img = img.resize((width, height))
-                logger.info(f"resizing to {width}x{height} due to size limit")
-        
-        if base64_size > max_size:
-            logger.warning(f"Image still too large after {max_attempts} attempts: {base64_size} bytes")
-            raise Exception(f"이미지 크기가 너무 큽니다. 5MB 이하의 이미지를 사용해주세요.")
-               
-        # extract text from the image
-        if debug_mode=="Enable":
-            status = "이미지에서 텍스트를 추출합니다."
-            logger.info(f"status: {status}")
-            st.info(status)
-        
-        text = extract_text(img_base64)
-        # print('extracted text: ', text)
-
-        if text.find('<result>') != -1:
-            extracted_text = text[text.find('<result>')+8:text.find('</result>')] # remove <result> tag
-            # print('extracted_text: ', extracted_text)
-        else:
-            extracted_text = text
-
-        if debug_mode=="Enable":
-            logger.info(f"### 추출된 텍스트\n\n{extracted_text}")
-            print('status: ', status)
-            st.info(status)
-    
-        if debug_mode=="Enable":
-            status = "이미지의 내용을 분석합니다."
-            logger.info(f"status: {status}")
-            st.info(status)
-
-        image_summary = summary_image(img_base64, "")
-        logger.info(f"image summary: {image_summary}")
-            
-        if len(extracted_text) > 10:
-            contents = f"## 이미지 분석\n\n{image_summary}\n\n## 추출된 텍스트\n\n{extracted_text}"
-        else:
-            contents = f"## 이미지 분석\n\n{image_summary}"
-        logger.info(f"image content: {contents}")
-
-        msg = contents
-
-    global fileId
-    fileId = uuid.uuid4().hex
-    # print('fileId: ', fileId)
-
-    return msg
 
 def upload_to_s3(file_bytes, file_name):
     """
@@ -673,83 +308,13 @@ def traslation(chat, text, input_language, output_language):
 
     return msg[msg.find('<result>')+8:len(msg)-9] # remove <result> tag
 
-def get_parallel_processing_chat(models, selected):
-    global model_type
-    profile = models[selected]
-    bedrock_region =  profile['bedrock_region']
-    modelId = profile['model_id']
-    model_type = profile['model_type']
-    maxOutputTokens = 4096
-    logger.info(f'selected_chat: {selected}, bedrock_region: {bedrock_region}, modelId: {modelId}, model_type: {model_type}')
-
-    if profile['model_type'] == 'nova':
-        STOP_SEQUENCE = '"\n\n<thinking>", "\n<thinking>", " <thinking>"'
-    elif profile['model_type'] == 'claude':
-        STOP_SEQUENCE = "\n\nHuman:" 
-    elif profile['model_type'] == 'openai':
-        STOP_SEQUENCE = "" 
-                          
-    # bedrock   
-    if aws_access_key and aws_secret_key:
-        boto3_bedrock = boto3.client(
-            service_name='bedrock-runtime',
-            region_name=bedrock_region,
-            aws_access_key_id=aws_access_key,
-            aws_secret_access_key=aws_secret_key,
-            aws_session_token=aws_session_token,
-            config=Config(
-                retries = {
-                    'max_attempts': 30
-                }
-            )
-        )
-    else:
-        boto3_bedrock = boto3.client(
-            service_name='bedrock-runtime',
-            region_name=bedrock_region,
-            config=Config(
-                retries = {
-                    'max_attempts': 30
-                }
-            )
-        )
-
-    if profile['model_type'] != 'openai':
-        parameters = {
-            "max_tokens":maxOutputTokens,     
-            "temperature":0.1,
-            "top_k":250,
-            "stop_sequences": [STOP_SEQUENCE]
-        }
-    else:
-        parameters = {
-            "max_tokens":maxOutputTokens,     
-            "temperature":0.1,
-            "top_k":250
-        }
-
-    chat = ChatBedrock(   # new chat model
-        model_id=modelId,
-        client=boto3_bedrock, 
-        model_kwargs=parameters,
-    )        
-    
-    return chat
-
-def show_extended_thinking(st, result):
-    # logger.info(f"result: {result}")
-    if "thinking" in result.response_metadata:
-        if "text" in result.response_metadata["thinking"]:
-            thinking = result.response_metadata["thinking"]["text"]
-            st.info(thinking)
-
 ####################### LangChain #######################
 # General Conversation
 #########################################################
 def general_conversation(query):
     global memory_chain
     initiate()  # Initialize memory_chain
-    llm = get_chat(extended_thinking=reasoning_mode)
+    llm = get_chat()
 
     system = (
         "당신의 이름은 서연이고, 질문에 대해 친절하게 답변하는 사려깊은 인공지능 도우미입니다."
@@ -791,7 +356,7 @@ def general_conversation(query):
     return stream
 
 def get_summary(docs):    
-    llm = get_chat(extended_thinking=reasoning_mode)
+    llm = get_chat()
 
     text = ""
     for doc in docs:
@@ -829,7 +394,7 @@ def get_summary(docs):
     return summary
 
 def summary_image(img_base64, instruction):      
-    llm = get_chat(extended_thinking=reasoning_mode)
+    llm = get_chat()
 
     if instruction:
         logger.info(f"instruction: {instruction}")
@@ -870,7 +435,7 @@ def summary_image(img_base64, instruction):
     return extracted_text
 
 def extract_text(img_base64):    
-    multimodal = get_chat(extended_thinking=reasoning_mode)
+    multimodal = get_chat()
     query = "텍스트를 추출해서 markdown 포맷으로 변환하세요. <result> tag를 붙여주세요."
     
     extracted_text = ""
@@ -1005,7 +570,7 @@ def summarize_image(image_content, prompt, st):
 ############################################################# 
 def get_rag_prompt(text):
     # print("###### get_rag_prompt ######")
-    llm = get_chat(extended_thinking=reasoning_mode)
+    llm = get_chat()
     # print('model_type: ', model_type)
     
     if model_type == "nova":
@@ -1066,21 +631,25 @@ def get_rag_prompt(text):
 
     return rag_chain
 
-if aws_access_key and aws_secret_key:
-    bedrock_agent_runtime_client = boto3.client(
-        "bedrock-agent-runtime",
-        region_name=bedrock_region,
-        aws_access_key_id=aws_access_key,
-        aws_secret_access_key=aws_secret_key,
-        aws_session_token=aws_session_token,
-    )
-else:
-    bedrock_agent_runtime_client = boto3.client(
-        "bedrock-agent-runtime",
-        region_name=bedrock_region
-    )
+bedrock_agent_runtime_client = boto3.client(
+    "bedrock-agent-runtime",
+    region_name=bedrock_region
+)
 knowledge_base_id = config.get('knowledge_base_id')
 number_of_results = 4
+
+
+def s3_uri_to_console_url(uri: str, region: str) -> str:
+    """Open the object in the AWS S3 console (when sharing_url is not configured)."""
+    if not uri or not uri.startswith("s3://"):
+        return ""
+    rest = uri[5:]
+    parts = rest.split("/", 1)
+    bucket = parts[0]
+    key = parts[1] if len(parts) > 1 else ""
+    enc_key = parse.quote(key, safe="")
+    return f"https://{region}.console.aws.amazon.com/s3/object/{bucket}?prefix={enc_key}"
+
 
 def retrieve(query):
     global knowledge_base_id
@@ -1105,16 +674,7 @@ def retrieve(query):
             projectName_local = config.get('projectName')
 
             # Create bedrock-agent client with same credentials as bedrock-agent-runtime client
-            if aws_access_key and aws_secret_key:
-                bedrock_agent_client = boto3.client(
-                    "bedrock-agent",
-                    region_name=bedrock_region_local,
-                    aws_access_key_id=aws_access_key,
-                    aws_secret_access_key=aws_secret_key,
-                    aws_session_token=aws_session_token,
-                )
-            else:
-                bedrock_agent_client = boto3.client("bedrock-agent", region_name=bedrock_region_local)
+            bedrock_agent_client = boto3.client("bedrock-agent", region_name=bedrock_region_local)
             knowledge_base_list = bedrock_agent_client.list_knowledge_bases()
             
             updated = False
@@ -1173,10 +733,13 @@ def retrieve(query):
             location = result["location"]
             if "s3Location" in location:
                 uri = location["s3Location"]["uri"] if location["s3Location"]["uri"] is not None else ""
-                
+
                 name = uri.split("/")[-1]
-                encoded_name = parse.quote(name)                
-                url = f"{path}/{doc_prefix}{encoded_name}"
+                encoded_name = parse.quote(name)
+                if path:
+                    url = f"{path}/{doc_prefix}{encoded_name}"
+                else:
+                    url = s3_uri_to_console_url(uri, bedrock_region)
                 
             elif "webLocation" in location:
                 url = location["webLocation"]["url"] if location["webLocation"]["url"] is not None else ""
@@ -1264,20 +827,20 @@ def extract_thinking_tag(response, st):
 
     return msg
 
-def add_notification(containers, message):
-    if containers is not None:
-        containers['queue'].notify(message)
+def add_notification(notification_queue, message):
+    if notification_queue is not None:
+        notification_queue.notify(message)
 
-def update_streaming_result(containers, message, type="markdown"):
-    if containers is not None:
+def update_streaming_result(notification_queue, message, type="markdown"):
+    if notification_queue is not None:
         if type == "markdown":
-            containers['queue'].stream(message)
+            notification_queue.stream(message)
         elif type == "info":
-            containers['queue'].notify(message)
+            notification_queue.notify(message)
 
-def update_final_result(containers, message):
-    if containers is not None:
-        containers['queue'].result(message)
+def update_final_result(notification_queue, message):
+    if notification_queue is not None:
+        notification_queue.result(message)
 
 tool_input_list = dict()
 
@@ -1556,8 +1119,8 @@ def get_tool_info(tool_name, tool_content):
 
     return content, urls, tool_references
 
-async def run_langgraph_agent(query, mcp_servers, history_mode, containers):
-    queue = containers['queue'] if containers else None
+async def run_langgraph_agent(query, mcp_servers, history_mode, notification_queue):
+    queue = notification_queue if notification_queue else None
     if queue:
         queue.reset()
 
@@ -1573,8 +1136,11 @@ async def run_langgraph_agent(query, mcp_servers, history_mode, containers):
     try:
         client = MultiServerMCPClient(server_params)
         logger.info(f"MCP client created successfully")
-        
-        tools = await client.get_tools()
+
+        tools = langgraph_agent.get_builtin_tools()        
+        mcp_tools = await client.get_tools()
+        if mcp_tools:
+            tools.extend(mcp_tools)
         logger.info(f"get_tools() returned: {tools}")
         
         if tools is None:
@@ -1593,24 +1159,29 @@ async def run_langgraph_agent(query, mcp_servers, history_mode, containers):
     if not tools:
         logger.warning("No tools available, using general conversation mode")
         result = "MCP 설정을 확인하세요."
-        update_final_result(containers, result)
+        if notification_queue is not None and debug_mode == "Enable":
+            update_final_result(notification_queue, result)
         return result, image_url
     
     if history_mode == "Enable":
         app = langgraph_agent.buildChatAgentWithHistory(tools)
         config = {
             "recursion_limit": 50,
-            "configurable": {"thread_id": user_id},
-            "tools": tools,
-            "system_prompt": None
+            "configurable": {
+                "thread_id": user_id,
+                "tools": tools,
+                "system_prompt": None,
+            },
         }
     else:
         app = langgraph_agent.buildChatAgent(tools)
         config = {
             "recursion_limit": 50,
-            "configurable": {"thread_id": user_id},
-            "tools": tools,
-            "system_prompt": None
+            "configurable": {
+                "thread_id": user_id,
+                "tools": tools,
+                "system_prompt": None,
+            },
         }        
     
     inputs = {
@@ -1639,10 +1210,11 @@ async def run_langgraph_agent(query, mcp_servers, history_mode, containers):
                                 result += text_content
                                 
                             # logger.info(f"result: {result}")                
-                            update_streaming_result(containers, result, "markdown")
+                            if debug_mode == "Enable" and queue:
+                                queue.stream(result)
 
                         elif content_item.get('type') == 'tool_use':
-                            logger.info(f"content_item: {content_item}")      
+                            # logger.info(f"content_item: {content_item}")      
                             if 'id' in content_item and 'name' in content_item:
                                 toolUseId = content_item.get('id', '')
                                 tool_name = content_item.get('name', '')
@@ -1668,7 +1240,8 @@ async def run_langgraph_agent(query, mcp_servers, history_mode, containers):
             toolResult = message.content
             toolUseId = message.tool_call_id
             logger.info(f"toolResult: {toolResult}, toolUseId: {toolUseId}")
-            add_notification(containers, f"Tool Result: {toolResult}")
+            if debug_mode == "Enable":
+                add_notification(notification_queue, f"Tool Result: {toolResult}")
             tool_used = True
             
             content, urls, refs = get_tool_info(tool_name, toolResult)
@@ -1695,6 +1268,7 @@ async def run_langgraph_agent(query, mcp_servers, history_mode, containers):
             ref += f"{i+1}. [{reference['title']}]({reference['url']}), {page_content}...\n"    
         result += ref
     
-    update_final_result(containers, result)
+    if notification_queue is not None and debug_mode == "Enable":
+        update_final_result(notification_queue, result)
     
     return result, image_url

@@ -18,9 +18,9 @@ import urllib.request
 import urllib.error
 
 # Configuration
-project_name = "es-us" # at least 3 characters
+project_name = "es-project" # at least 3 characters
 region = "us-west-2"
-git_name = "es-us-project"
+git_name = "es-project"
 
 sts_client = boto3.client("sts", region_name=region)
 account_id = sts_client.get_caller_identity()["Account"]
@@ -671,14 +671,6 @@ def create_secrets() -> Dict[str, str]:
     logger.info("Please enter API keys when prompted (press Enter to skip and leave empty):")
     
     secrets = {
-        "weather": {
-            "name": f"openweathermap-{project_name}",
-            "description": "secret for weather api key",
-            "secret_value": {
-                "project_name": project_name,
-                "weather_api_key": ""
-            }
-        },
         "tavily": {
             "name": f"tavilyapikey-{project_name}",
             "description": "secret for tavily api key",
@@ -700,34 +692,10 @@ def create_secrets() -> Dict[str, str]:
         except ClientError as e:
             if e.response["Error"]["Code"] == "ResourceNotFoundException":
                 # Secret doesn't exist, prompt for API key and create it
-                if key == "weather":
-                    logger.info(f"Enter credential of {secret_config['name']} (Weather API Key - OpenWeatherMap):")
-                    api_key = input(f"Creating {secret_config['name']} - Weather API Key (OpenWeatherMap): ").strip()
-                    secret_config["secret_value"]["weather_api_key"] = api_key
-                elif key == "langsmith":
-                    logger.info(f"Enter credential of {secret_config['name']} (LangSmith API Key):")
-                    api_key = input(f"Creating {secret_config['name']} - LangSmith API Key: ").strip()
-                    secret_config["secret_value"]["langsmith_api_key"] = api_key
-                elif key == "tavily":
+                if key == "tavily":
                     logger.info(f"Enter credential of {secret_config['name']} (Tavily API Key):")
                     api_key = input(f"Creating {secret_config['name']} - Tavily API Key: ").strip()
                     secret_config["secret_value"]["tavily_api_key"] = api_key
-                elif key == "perplexity":
-                    logger.info(f"Enter credential of {secret_config['name']} (Perplexity API Key):")
-                    api_key = input(f"Creating {secret_config['name']} - Perplexity API Key: ").strip()
-                    secret_config["secret_value"]["perplexity_api_key"] = api_key
-                elif key == "firecrawl":
-                    logger.info(f"Enter credential of {secret_config['name']} (Firecrawl API Key):")
-                    api_key = input(f"Creating {secret_config['name']} - Firecrawl API Key: ").strip()
-                    secret_config["secret_value"]["firecrawl_api_key"] = api_key
-                elif key == "nova_act":
-                    logger.info(f"Enter credential of {secret_config['name']} (Nova Act API Key):")
-                    api_key = input(f"Creating {secret_config['name']} - Nova Act API Key: ").strip()
-                    secret_config["secret_value"]["nova_act_api_key"] = api_key
-                elif key == "notion":
-                    logger.info(f"Enter credential of {secret_config['name']} (Notion API Key):")
-                    api_key = input(f"Creating {secret_config['name']} - Notion API Key: ").strip()
-                    secret_config["secret_value"]["notion_api_key"] = api_key
                 
                 # Create the secret
                 try:
